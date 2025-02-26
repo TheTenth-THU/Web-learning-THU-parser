@@ -3,9 +3,9 @@
     <h2>Todoist Parser for the Web Learning of Tsinghua University</h2>
     <table>
         <tr>
-            <td> **中文** </td>
-            <td> [English](README_en.md) </td>
-            <td> [Русский](README_ru.md) </td>
+            <td><a href="README.md">中文</a></td>
+            <td><a href="README_en.md">English</a></td>
+            <td style="font-weight: bold;">Русский</td>
         </tr>
     </table>
 </div>

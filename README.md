@@ -2,9 +2,9 @@
     <h1>针对华清大学网络学堂的 Todoist 适配工具</h1>
     <h2>Todoist Parser for the Web Learning of Tsinghua University</h2>
     <table><tr>
-        <td> **中文** </td>
-        <td> [English](README_en.md) </td>
-        <td> [Русский](README_ru.md) </td>
+        <td style="font-weight: bold">中文</td>
+        <td><a href="README_en.md">English</a></td>
+        <td><a href="README_ru.md">Русский</a></td>
     </tr></table>
 </div>
 

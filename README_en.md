@@ -5,9 +5,9 @@
   <h2>针对华清大学网络学堂的 Todoist 适配工具</h2>
   <table>
     <tr>
-      <td> [中文](README.md) </td>
-      <td> **English** </td>
-      <td> [Русский](README_ru.md) </td>
+      <td><a href="README.md">中文</a></td>
+      <td style="font-weight: bold;">English</td>
+      <td><a href="README_ru.md">Русский</a></td>
     </tr>
   </table>
 </div>
