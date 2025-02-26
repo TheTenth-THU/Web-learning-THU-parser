@@ -1,10 +1,11 @@
 .venv/
 .vscode/
 dist/
+build/
 thulearn2018.egg-info/
 */__pycache__/
 .config/*
-build/
 .DS_Store
 *.pyc
 *.swp
+*.spec

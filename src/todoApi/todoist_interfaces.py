@@ -253,6 +253,45 @@ class TodoistInterface:
             print("Add task failed:", e)
             return None
         
+    def update_task(self, task_id: str, **kwargs) -> bool:
+        """ Update the task with the specified id.
+
+        Args:
+            task_id (str):          The id of the task.
+            content (str):          The content of the task.
+            labels (list[str]):     The labels of the task.
+            desc (str):             The description of the task.
+            priority (int):         The priority of the task, from 1 (normal) to 4 (urgent).
+            due_string (str):       The due date of the task and can be recognized by Todoist.
+            due_lang (str):         The language of the `due_string`. Default is `en`.
+            due_datetime (str):     The due date of the task in _RFC3339_ format (`YYYY-MM-DDTHH:MM:SS`).
+
+        Returns:
+            res (bool):             Whether the task is updated.
+        """
+        if "due_datetime" in kwargs:
+            kwargs["due_datetime"] = datetime.strptime(kwargs["due_datetime"], "%Y-%m-%dT%H:%M:%S").strftime("%Y-%m-%dT%H:%M:%SZ")
+            if "due_string" in kwargs:
+                del kwargs["due_string"]
+            if "due_lang" in kwargs:
+                del kwargs["due_lang"]
+        if "priority" in kwargs:
+            if kwargs["priority"] < 1:
+                kwargs["priority"] = 1
+            elif kwargs["priority"] > 4:
+                kwargs["priority"] = 4
+            else:
+                kwargs["priority"] = int(kwargs["priority"])
+        try:
+            is_success = self.todoist.update_task(task_id, **kwargs)
+            if not is_success:
+                print("Update task failed by unknown reason.")
+            return is_success
+        except Exception as e:
+            print("Update task failed:", e)
+            return False
+
+        
     def complete_task(self, task_id: str) -> bool:
         """ Complete the task with the specified id.
 

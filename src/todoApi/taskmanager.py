@@ -18,6 +18,7 @@ We have the 3-level structure of the to-do list, i.e. `project` -> `section` -> 
 
 from .todoist_interfaces import TodoistInterface
 
+import sys
 from tqdm import tqdm
 from datetime import datetime, timedelta
 
@@ -67,12 +68,17 @@ class TaskManager:
         Args:
             courses (list): List of course names.
         """
-        prog_bar = tqdm(courses, desc='Creating labels')
+        if sys.stdout is not None and sys.stdout.isatty():
+            # is in terminal
+            prog_bar = tqdm(courses, desc='Creating labels')
+        else:
+            prog_bar = courses
         colors = self.settings.color_choices
         labels = [l.name for l in self.todoist.get_personal_labels()]
         count = 0
         for course in prog_bar:
-            prog_bar.set_description(f'Creating label for course "{course[1]}"')
+            if sys.stdout is not None and sys.stdout.isatty():
+                prog_bar.set_description(f'Creating label for course "{course[1]}"')
             if course[4] not in labels:
                 self.todoist.add_label(course[1], color=colors[count])
                 count = (count + 1) % len(colors)
@@ -83,32 +89,44 @@ class TaskManager:
         Args:
             assignments (list[list]): List of assignments. Each assignment is a list of 5 elements, i.e. [_course_, _name_, _due_string_, _rest_time_, _submission_].
         """
-        prog_bar = tqdm(assignments, desc='Parsing assignments')
+        if sys.stdout is not None and sys.stdout.isatty():
+            # is in terminal
+            prog_bar = tqdm(assignments, desc='Parsing assignments')
+        else:
+            prog_bar = assignments
         exist_tasks = self.todoist.get_tasks(project_id=self.working_project.id, section_id=self.working_section.id)
         exist_tasks = [task.content for task in exist_tasks]
         labels = self.todoist.get_personal_labels()
         labels = {l.name: l for l in labels}
         for assignment in prog_bar:
             course, name, due_string, rest_time, submission = assignment
-            prog_bar.set_description(f'Parsing assignment "{name}"')
-            if name in exist_tasks and submission != '未交':
-                self.todoist.complete_task(self.todoist.get_task(self.working_project.id, name).id)
-                continue
-            if submission != '未交':
-                continue
+            if sys.stdout is not None and sys.stdout.isatty():
+                prog_bar.set_description(f'Parsing assignment "{name}"')
             due_datetime = datetime.strptime(due_string, '%Y-%m-%d %H:%M')
             if due_datetime < datetime.now() + timedelta(days=3):
                 priority = 3
             else:
-                priority = 2                
-            task = self.todoist.add_task(
-                course + ' ' + name,
-                self.working_project.id,
-                section_id=self.working_section.id,
-                due_string=due_string,
-                priority=priority,
-                labels=[labels[course].name]
-            )
+                priority = 2
+
+            if name in exist_tasks:
+                if submission != '未交':
+                    self.todoist.complete_task(self.todoist.get_task(self.working_project.id, name).id)
+                else:
+                    task = self.todoist.get_task(self.working_project.id, course + ' ' + name)
+                    if task.due.datetime != due_datetime.strftime('%Y-%m-%dT%H:%M:%S') or task.priority != priority:
+                        self.todoist.update_task(task.id, due_string=due_string, priority=priority)
+            else:
+                if submission != '未交':
+                    pass
+                else:
+                    self.todoist.add_task(
+                        course + ' ' + name,
+                        self.working_project.id,
+                        section_id=self.working_section.id,
+                        due_string=due_string,
+                        priority=priority,
+                        labels=[labels[course].name]
+                    )
         
 
     

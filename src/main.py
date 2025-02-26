@@ -64,7 +64,9 @@ def test():
 if __name__ == '__main__':
     if hasattr(sys, '_MEIPASS'):
         # packaged environment
-        temp_config_path = os.path.join(sys._MEIPASS, "config.json")
+        user_docs = os.path.join(os.path.expanduser("~"), "Documents")
+        config_dir = os.path.join(user_docs, "WebLearningTHU")
+        temp_config_path = os.path.join(config_dir, "config.json")
     else:
         # development environment
         temp_config_path = os.path.join(os.path.split(os.path.split(__file__)[0])[0], "config.json")
