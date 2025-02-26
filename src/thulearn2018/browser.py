@@ -8,14 +8,14 @@ This script provides a class for interacting with the Web Learning. Methods in t
 
     **set_user** (_void_) -> _None_
     Call `FileManager.set_user()` to set the username and password.
-    **get_user** (_str_) -> _str_
+    **get_user** (_void_) -> _str_
     Call `FileManager.get_user()` to get current username and password.
 
 ### File management
 
     **set_path** (_void_) -> _None_
     Call `FileManager.set_path()` to set the path to save files.
-    **get_path** (_str_) -> _str_
+    **get_path** (_void_) -> _str_
     Call `FileManager.get_path()` to get current path to save files.
     **set_local** (_void_) -> _None_
     Call `FileManager.set_local()` to reset (clear) the file record.
@@ -62,24 +62,24 @@ from . import filemanager, jsonhelper, soup, utils
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
-class SSLAdapter(requests.adapters.HTTPAdapter):
-    def init_poolmanager(self, connections, maxsize, block=False, **kwargs):
-        ctx = ssl.create_default_context()
-        # 禁用证书验证（注意安全风险）
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        ctx.set_ciphers("DEFAULT@SECLEVEL=1")
-        ctx.options |= getattr(ssl, "OP_LEGACY_SERVER_CONNECT", 0)
-        kwargs['ssl_context'] = ctx
-        return super(SSLAdapter, self).init_poolmanager(connections, maxsize, block, **kwargs)
+# class SSLAdapter(requests.adapters.HTTPAdapter):
+#     def init_poolmanager(self, connections, maxsize, block=False, **kwargs):
+#         ctx = ssl.create_default_context()
+#         # 禁用证书验证（注意安全风险）
+#         ctx.check_hostname = False
+#         ctx.verify_mode = ssl.CERT_NONE
+#         ctx.set_ciphers("DEFAULT@SECLEVEL=1")
+#         ctx.options |= getattr(ssl, "OP_LEGACY_SERVER_CONNECT", 0)
+#         kwargs['ssl_context'] = ctx
+#         return super(SSLAdapter, self).init_poolmanager(connections, maxsize, block, **kwargs)
     
-    def proxy_manager_for(self, proxy, **kwargs):
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        ctx.options |= getattr(ssl, "OP_LEGACY_SERVER_CONNECT", 0)
-        kwargs['ssl_context'] = ctx
-        return super(SSLAdapter, self).proxy_manager_for(proxy, **kwargs)
+#     def proxy_manager_for(self, proxy, **kwargs):
+#         ctx = ssl.create_default_context()
+#         ctx.check_hostname = False
+#         ctx.verify_mode = ssl.CERT_NONE
+#         ctx.options |= getattr(ssl, "OP_LEGACY_SERVER_CONNECT", 0)
+#         kwargs['ssl_context'] = ctx
+#         return super(SSLAdapter, self).proxy_manager_for(proxy, **kwargs)
 
 class Learn():
     def __init__(self, settings, reset=False):
@@ -89,9 +89,9 @@ class Learn():
         """
         self.settings = settings
 
-        disable_warnings(InsecureRequestWarning)
+        # disable_warnings(InsecureRequestWarning)
         self.session = requests.Session()
-        self.session.mount('https://', SSLAdapter())
+        # self.session.mount('https://', SSLAdapter())
         self.session.headers = self.settings.headers
 
         self.fm = filemanager.FileManager(self.settings)
@@ -139,11 +139,11 @@ class Learn():
             params = {
                 '_csrf': self.session.cookies.get_dict()['XSRF-TOKEN']
             }
-            return self.session.post(url, data=form, params=params, verify=False,
+            return self.session.post(url, data=form, params=params, #verify=False,
                                      headers=headers).content
         else:
             self.session.trust_env = False
-            return self.session.post(url, data=form, verify=False,
+            return self.session.post(url, data=form, #verify=False,
                                      headers=headers).content
 
     def _get(self, url, params={}, csrf=True, headers={}):
