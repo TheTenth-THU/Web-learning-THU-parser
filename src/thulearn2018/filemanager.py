@@ -1,4 +1,3 @@
-from . import settings
 from . import utils
 import platform
 import getpass
@@ -7,17 +6,24 @@ import sys
 
 
 class FileManager():
-    def __init__(self):
-        pass
+    def __init__(self, settings):
+        self.settings = settings
 
-    def mkdir(self, name):
+    def _mkdir(self, name):
         if not os.path.exists(name):
             os.makedirs(name)
 
     def mkdirl(self, name):
-        self.mkdir(name)
-        self.mkdir(os.path.join(name, "file"))
-        self.mkdir(os.path.join(name, "homework"))
+        """Make directory for lessons.
+        
+        This method will create a directory for lessons with the specified name, and create subdirectories for files and homework.
+
+        Args:
+            name (str):     The name of the directory.
+        """
+        self._mkdir(name)
+        self._mkdir(os.path.join(name, "file"))
+        self._mkdir(os.path.join(name, "homework"))
 
     def set_user(self):
         username, password = self.get_user(reset=False)
@@ -36,7 +42,7 @@ class FileManager():
         new_password = getpass.getpass()
         if new_password:
             password = new_password
-        sf = open(settings.user_file_path, 'w')
+        sf = open(self.settings.user_file_path, 'w')
         print(username, file=sf)
         print(password, file=sf)
         sf.close()
@@ -44,7 +50,7 @@ class FileManager():
 
     def get_user(self, reset=True):
         try:
-            f = open(settings.user_file_path, 'r')
+            f = open(self.settings.user_file_path, 'r')
             lines = f.readlines()
             username = lines[0].replace('\n', '').replace('\r', '')
             password = lines[1].replace('\n', '').replace('\r', '')
@@ -55,13 +61,13 @@ class FileManager():
         return (username, password)
 
     def set_local(self):
-        sf = open(settings.local_file_path, 'w')
+        sf = open(self.settings.local_file_path, 'w')
         sf.close()
 
     def get_local(self):
         local = set()
         try:
-            f = open(settings.local_file_path, 'r')
+            f = open(self.settings.local_file_path, 'r')
             lines = f.readlines()
             for line in lines:
                 local.add(line.split()[0])
@@ -80,14 +86,14 @@ class FileManager():
         input_path = input()
         if input_path:
             path = input_path
-        sf = open(settings.path_file_path, 'w')
+        sf = open(self.settings.path_file_path, 'w')
         print(path, file=sf)
         sf.close()
         return path
 
     def get_path(self, reset=True):
         try:
-            f = open(settings.path_file_path, 'r')
+            f = open(self.settings.path_file_path, 'r')
             path = f.readlines()[0].replace('\n', '').replace('\r', '')
             f.close()
         except:
@@ -106,7 +112,7 @@ class FileManager():
         if (not os.path.exists(os.path.join(hw_dir, ".xszyid"))):
             print("  Homework " + hw_title)
 
-        self.mkdir(hw_dir)
+        self._mkdir(hw_dir)
 
         try:
             f = open(os.path.join(hw_dir, "README.md"), 'w', encoding='utf-8')

@@ -1,7 +1,10 @@
-dist/*
-thulearn2018.egg-info/*
+.venv/
+.vscode/
+dist/
+thulearn2018.egg-info/
+*/__pycache__/
+.config/*
+build/
 .DS_Store
 *.pyc
-__pycache__/*
-build/*
 *.swp

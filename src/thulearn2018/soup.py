@@ -1,11 +1,9 @@
 from bs4 import BeautifulSoup
 
-from . import settings
-
 
 class Soup():
-    def __init__(self):
-        pass
+    def __init__(self, settings):
+        self.settings = settings
 
     def parse_ticket(self, content):
         soup = BeautifulSoup(content, "html.parser")
@@ -81,7 +79,7 @@ class Soup():
             attr = ["NONE", "NONE", "NONE"]  # name, download url, id
             if len(annex) > 0:
                 attr[0] = annex[0].get_text().strip()
-                attr[1] = settings.url+annex[1].get('href')
+                attr[1] = self.settings.url+annex[1].get('href')
                 attr[2] = annex[1].get('href').split('/')[-1]
             annex_attrs.append(attr)
         return annex_attrs, img_urls
