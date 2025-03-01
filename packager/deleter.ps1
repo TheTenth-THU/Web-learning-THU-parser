@@ -1,4 +1,4 @@
 pyinstaller --onefile --console `
-    --name "with_console" `
+    --name "deleter" `
     -i .\res\deleter.ico `
-    .\src\main.py
+    .\src\deleter.py

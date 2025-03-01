@@ -1,6 +1,7 @@
-# Todoist Parser for Tsinghua University Web Learning
-
 <div align="center">
+  <div>
+      <img src="res/logo.png" width="128" height="128">
+  </div>
   <h1>Todoist Adapter for Tsinghua University Web Learning</h1>
   <h2>针对华清大学网络学堂的 Todoist 适配工具</h2>
   <table>

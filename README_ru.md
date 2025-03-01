@@ -1,4 +1,7 @@
 <div align="center">
+    <div>
+        <img src="res/logo.png" width="128" height="128">
+    </div>
     <h1>Todoist адаптер для онлайн-курсов Университета Tsinghua</h1>
     <h2>Todoist Parser for the Web Learning of Tsinghua University</h2>
     <table>

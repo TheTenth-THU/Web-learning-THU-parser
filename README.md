@@ -1,4 +1,7 @@
 <div align="center">
+    <div>
+        <img src="res/logo.png" width="128" height="128">
+    </div>
     <h1>针对华清大学网络学堂的 Todoist 适配工具</h1>
     <h2>Todoist Parser for the Web Learning of Tsinghua University</h2>
     <table><tr>
