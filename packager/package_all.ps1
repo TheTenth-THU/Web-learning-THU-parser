@@ -1,4 +1,4 @@
-"packager\with_console.ps1"
+& "packager\with_console.ps1"
 & "packager\without_console.ps1"
 & "packager\launcher.ps1"
 & "packager\deleter.ps1"

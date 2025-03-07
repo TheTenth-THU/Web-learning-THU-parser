@@ -53,6 +53,7 @@ This script provides a class for interacting with the Web Learning. Methods in t
 """
 
 import os
+import sys
 import ssl
 import requests
 from urllib3.exceptions import InsecureRequestWarning
@@ -344,17 +345,36 @@ class Learn():
             download_files (bool):          Whether to download the files.
             
         Returns:
-            ddls (list):    List of homework deadlines, each represented as a tuple of the form (_lesson_name_, _homework_title_, _deadline_, _size_).
+            ddls (list):    List of homework deadlines, each represented as a list of the form [_lesson_name_, _homework_title_, _deadline_, _size_, _readme_].
         """
         ddls = []
+        if download_files:
+            try:
+                with open(self.settings.user_file_path, "r") as f:
+                    port = f.readlines()[2].strip()
+                    self.settings.port = port
+            except Exception:
+                if sys.stdout is not None and sys.stdout.isatty():
+                    port = input("Please input the port of the server: ")
+                    self.settings.port = port
+                    if port != "":
+                        with open(self.settings.user_file_path, "a") as f:
+                            f.write(f"{port}\n")
+                else:
+                    download_files = False
+
         for api in self.settings.homeworks_url(lesson_id):
             for hw in self.jh.loads(self._get(api))["object"]["aaData"]:
                 content = self._get(self.settings.homework_url(lesson_id, hw))
                 hw_title, hw_readme = self.soup.parse_homework(content, hw)
-                ddls.append((lesson_name, hw_title, hw["jzsjStr"], hw["wjmc"] +
-                             "   "+utils.size_format(int(hw["wjdx"])) if
-                             hw["wjmc"] is not None else hw["zynrStr"] if
-                             hw["zynrStr"] != "" else hw["zt"]))
+                ddls.append([lesson_name, 
+                             hw_title, 
+                             hw["jzsjStr"], 
+                             hw["wjmc"] + "   " + utils.size_format(int(hw["wjdx"])) if hw["wjmc"] is not None \
+                                 else hw["zynrStr"] if hw["zynrStr"] != "" \
+                                 else hw["zt"],
+                             hw_readme
+                             ])
 
                 if download_files:
                     hw_dir = os.path.join(self.path, lesson_name, "homework",
@@ -367,14 +387,19 @@ class Learn():
                         if i == 2 and not download_submission:
                             break
                         annex_name, download_url, annex_id = attr
-                        annex_prefix = "answer_" if i == 1 else \
-                            "reviewed_" if i == 3 else ""
+                        annex_prefix = "answer_" if i == 1 else "reviewed_" if i == 3 else ""
                         if (annex_name != "NONE" and
                                 not self.file_id_exist(annex_id)):
                             annex = self.session.get(download_url, stream=True)
                             fpath = os.path.join(hw_dir, annex_prefix+annex_name)
                             self.fm.downloadto(fpath, annex, annex_name)
                             self.save_file_id(annex_id, fpath)
+                            # file path relative to the `self.path` directory
+                            file_path = os.path.relpath(fpath, self.path)
+                            # add annexes to readme in `ddls` (ddls[-1][4])
+                            ddls[-1][4] += f"\n[Assignment annex](https://localhost:{port}/{file_path})"
+                    ddls[-1][4] += " (￣ェ￣;)"
+
                     img_names = []
                     for i, img_url in enumerate(img_urls):
                         img = self.session.get(img_url, stream=True)
@@ -440,8 +465,12 @@ class Learn():
         # delete expired homework by comparing ddl[2] with current time
         ddls = [ddl for ddl in ddls if not utils.expired(ddl[2])]
         ddls.sort(key=lambda x: x[2])
-        return [[ddl[0], ddl[1], ddl[2], utils.time_delta(ddl[2]), ddl[3]]
-                for ddl in ddls]
+        if len(ddls[0]) == 4:
+            return [[ddl[0], ddl[1], ddl[2], utils.time_delta(ddl[2]), ddl[3]]
+                    for ddl in ddls]
+        else:
+            return [[ddl[0], ddl[1], ddl[2], utils.time_delta(ddl[2]), ddl[3], ddl[4]]
+                    for ddl in ddls]
 
 
 def main():

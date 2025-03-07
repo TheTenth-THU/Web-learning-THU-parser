@@ -41,6 +41,7 @@ class Settings:
         self.user_file_path = os.path.join(self.config_dir, "user.txt")
         self.local_file_path = os.path.join(self.config_dir, "local.txt")
         self.path_file_path = os.path.join(self.config_dir, "path.txt")
+        self.port = None
 
         self.url = "https://learn.tsinghua.edu.cn/"
         self.login_id_url = "https://id.tsinghua.edu.cn/do/off/ui/auth/login/post/bb5df85216504820be7bba2b0ae1535b/0?/login.do"

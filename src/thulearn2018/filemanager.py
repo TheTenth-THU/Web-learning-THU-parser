@@ -114,12 +114,12 @@ class FileManager():
 
         self._mkdir(hw_dir)
 
-        try:
-            f = open(os.path.join(hw_dir, "README.md"), 'w', encoding='utf-8')
-            f.write(hw_readme)
-            f.close()
-        except:
-            pass
+        # try:
+        #     f = open(os.path.join(hw_dir, "README.md"), 'w', encoding='utf-8')
+        #     f.write(hw_readme)
+        #     f.close()
+        # except:
+        #     pass
 
         if (not os.path.exists(os.path.join(hw_dir, ".xszyid"))):
             with open(os.path.join(hw_dir, ".xszyid"), "w") as f:
@@ -139,6 +139,8 @@ class FileManager():
             print("  Create " + file_name)
         else:
             print("  Cover " + file_name)
+            if os.path.exists(save_path+".tmp"):
+                os.remove(save_path+".tmp")
             os.rename(save_path, save_path+".tmp")
         try:
             with open(save_path, "wb") as local:

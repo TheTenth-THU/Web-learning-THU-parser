@@ -55,16 +55,21 @@ class Soup():
             grading_content_title, graded_file_title) = ("截止日期", "批阅老师",
             "批阅时间", "成绩", "评语", "评语附件") if is_zh else (
             "Deadline", "By", "Grading Time", "Grade", "Comment", "Attach.")
-        txt = boxbox[0].get_text().replace('\t', '').split('\n') + \
-            [ddl_title] + [str(hw["jzsjStr"])] + \
-            boxbox[1].get_text().replace('\t', '').split('\n') + \
-            ["老师批阅结果：" if is_zh else "Instructors' comments"] + \
-            [instructor_name_title] + [str(hw["jsm"])] + \
-            [grading_time_title] + [str(hw["pysjStr"])] + \
-            [grade_title] + [str(hw["cj"])] + \
-            [grading_content_title] + [str(hw["pynr"])] + \
-            [graded_file_title] + [str(hw["wjmc"])]
-        hw_readme = self.to_markdown(txt)
+        # txt = boxbox[0].get_text().replace('\t', '').split('\n') + \
+        #     [ddl_title] + [str(hw["jzsjStr"])] + \
+        #     boxbox[1].get_text().replace('\t', '').split('\n') + \
+        #     ["老师批阅结果：" if is_zh else "Instructors' comments"] + \
+        #     [instructor_name_title] + [str(hw["jsm"])] + \
+        #     [grading_time_title] + [str(hw["pysjStr"])] + \
+        #     [grade_title] + [str(hw["cj"])] + \
+        #     [grading_content_title] + [str(hw["pynr"])] + \
+        #     [graded_file_title] + [str(hw["wjmc"])]
+        # hw_readme = self.to_markdown(txt)
+        hw_readme = boxbox[0].get_text().replace('\t', '').split('\n')
+        hw_readme = [line.strip() for line in hw_readme if line.strip()]
+        hw_readme = "\n".join(hw_readme)
+        hw_readme = hw_readme.split("作业说明")[1].split("作业附件")[0].strip() if is_zh else \
+            hw_readme.split("Description")[1].split("Attach")[0].strip()
         return (hw_title, hw_readme)
 
     def parse_annex(self, content):

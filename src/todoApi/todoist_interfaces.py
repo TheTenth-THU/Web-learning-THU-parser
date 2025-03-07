@@ -260,7 +260,8 @@ class TodoistInterface:
             task_id (str):          The id of the task.
             content (str):          The content of the task.
             labels (list[str]):     The labels of the task.
-            desc (str):             The description of the task.
+            desc (str):             (Deprecated, moved to `description`) The description of the task.
+            description (str):      The description of the task.
             priority (int):         The priority of the task, from 1 (normal) to 4 (urgent).
             due_string (str):       The due date of the task and can be recognized by Todoist.
             due_lang (str):         The language of the `due_string`. Default is `en`.
@@ -282,6 +283,11 @@ class TodoistInterface:
                 kwargs["priority"] = 4
             else:
                 kwargs["priority"] = int(kwargs["priority"])
+        if "desc" in kwargs:
+            if "description" not in kwargs or not kwargs["description"]:
+                kwargs["description"] = kwargs["desc"]
+            del kwargs["desc"]
+            
         try:
             is_success = self.todoist.update_task(task_id, **kwargs)
             if not is_success:
