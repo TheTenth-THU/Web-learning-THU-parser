@@ -56,6 +56,7 @@ import os
 import sys
 import ssl
 import requests
+from urllib.parse import quote
 from urllib3.exceptions import InsecureRequestWarning
 from urllib3 import disable_warnings
 
@@ -396,6 +397,9 @@ class Learn():
                             self.save_file_id(annex_id, fpath)
                             # file path relative to the `self.path` directory
                             file_path = os.path.relpath(fpath, self.path)
+                            # process the path for the server to handle "\", " ", Chinese characters, etc.
+                            file_path = file_path.replace("\\", "/")
+                            file_path = quote(file_path, safe=":/")
                             # add annexes to readme in `ddls` (ddls[-1][4])
                             ddls[-1][4] += f"\n[Assignment annex](https://localhost:{port}/{file_path})"
                     ddls[-1][4] += " (￣ェ￣;)"
