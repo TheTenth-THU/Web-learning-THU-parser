@@ -10,3 +10,5 @@ thulearn2018.egg-info/
 *.swp
 *.spec
 src/test.py
+TempErr.log
+TempOut.log
