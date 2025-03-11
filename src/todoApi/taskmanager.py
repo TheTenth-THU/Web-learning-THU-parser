@@ -20,6 +20,7 @@ from .todoist_interfaces import TodoistInterface
 from .settings import Settings
 
 import sys
+import os
 from tqdm import tqdm
 from datetime import datetime, timedelta
 from win10toast import ToastNotifier
@@ -99,10 +100,11 @@ class TaskManager:
         try:
             with open(self.settings.changed_file_path, 'r') as f:
                 changed = f.readlines()
-                # line format: `task_id || task_name || task_due || task_changed_flag\r\n`
-                changed = {line.split(' || ')[1]: {'id': line.split(' || ')[0], 
-                                                   'due': datetime.strptime(line.split(' || ')[2], '%Y-%m-%dT%H:%M:%S'),
-                                                   'changed': (line.split(' || ')[3].replace('\r', '').replace('\n', '') == 'True')}
+                # line format: `task_id || task_name || task_course || task_due || task_changed_flag\r\n`
+                changed = {line.split(' || ')[0]: {'name': line.split(' || ')[1], 
+                                                   'course': line.split(' || ')[2],
+                                                   'due': datetime.strptime(line.split(' || ')[3], '%Y-%m-%dT%H:%M:%S'),
+                                                   'changed': (line.split(' || ')[4].replace('\r', '').replace('\n', '') == 'True')}
                            for line in changed}
         except:
             changed = {}
@@ -111,7 +113,7 @@ class TaskManager:
         exist_tasks = self.todoist.get_tasks(project_id=self.working_project.id, section_id=self.working_section.id)
         exist_tasks_due = {task.content: task.due.datetime for task in exist_tasks}
         exist_tasks_id = {task.content: task.id for task in exist_tasks}
-        exist_tasks = [task.content for task in exist_tasks]
+        exist_tasks = [task.content.strip() for task in exist_tasks]
 
         labels = self.todoist.get_personal_labels()
         labels = {l.name: l for l in labels}
@@ -144,37 +146,48 @@ class TaskManager:
             # here the assignment or task exists at 3 positions
             # + Web Learning: in `assignment`, shaped as [course, name, due_string, rest_time, submission, readme]
             # + Todoist: in `exist_tasks` for content, `exist_tasks_due[content]` for due date, `exist_tasks_id[content]` for id
-            # + Local file: in `changed`, shaped as {name: {'id': id, 'due': due, 'changed': changed}}
-        
+            # + Local file: in `changed`, shaped as {id: {'name': name, 'due': due, 'changed': changed}}
+            # belowing codes are based on `assignment`
+            _debug = False
             if content in exist_tasks:
                 # task has been added to Todoist
                 if submission != '未交':
                     # task has been submitted
                     self.todoist.complete_task(self.todoist.get_task(self.working_project.id, content).id)
+                    if _debug:
+                        print(f'{name} has been submitted, and marked as completed.')
                 else:
                     # task has not been submitted
-                    if changed.get(name) is not None:
+                    if changed.get(exist_tasks_id[content]) is not None:
                         # task has been added to `changed.txt`
-                        if changed[name]['changed']:
+                        if changed[exist_tasks_id[content]]['changed']:
                             # task has been manually changed
-                            due_string = changed[name]['due'].strftime('%Y-%m-%d %H:%M')
-                        elif exist_tasks_due[content] != changed[name]['due']:
+                            due_string = changed[exist_tasks_id[content]]['due'].strftime('%Y-%m-%d %H:%M')
+                            if _debug:
+                                print(f'{name} has been manually changed to {due_string}.')
+                        elif exist_tasks_due[content] != changed[exist_tasks_id[content]]['due']:
                             # task has not been manually changed, but the due date is different
-                            changed[name]['due'] = due_datetime
-                            changed[name]['changed'] = True
+                            changed[exist_tasks_id[content]]['due'] = due_datetime
+                            changed[exist_tasks_id[content]]['changed'] = True
+                            if _debug:
+                                print(f'{name} has been changed to {due_datetime.strftime("%Y-%m-%d %H:%M")} automatically.')
                         else:
                             # task has not been manually changed, and the due date is the same
-                            changed[name]['due'] = due_datetime
+                            changed[exist_tasks_id[content]]['due'] = due_datetime
+                            if _debug:
+                                print(f'{name} has not been changed.')
                     else:
-                        # task has not been added to `changed.txt`, meaning it is a new assignment
-                        changed[name] = {'id': exist_tasks_id[content], 'due': due_datetime, 'changed': False}
+                        # task has not been added to `changed.txt`, meaning it is a new assignment but added to Todoist
+                        changed[exist_tasks_id[content]] = {'name': name, 'course': course, 'due': due_datetime, 'changed': False}
                         self.notifier.show_toast(
                             f'New assignment: {name}', 
                             f'From {course}\nDue at {due_datetime.strftime("%Y-%m-%d %H:%M")}', 
                             duration=10,
-                            icon_path="",
+                            icon_path=os.path.join(sys._MEIPASS, 'logo.ico') if hasattr(sys, '_MEIPASS') else os.path.abspath('res/logo.ico'),
                             threaded=True
                         )
+                        if _debug:
+                            print(f'{name} is a new assignment but added to Todoist.')
                             
                     task = self.todoist.get_task(self.working_project.id, content)
                     if task.due.datetime != due_datetime.strftime('%Y-%m-%dT%H:%M:%S') or task.priority != priority:
@@ -192,30 +205,36 @@ class TaskManager:
             else:
                 # task has not been added to Todoist, or has been deleted/closed
                 if submission != '未交':
-                    pass
+                    if _debug:
+                        print(f'{name} has been submitted, and ignored.')
                 else:
-                    if changed.get(name) is not None:
-                        # task has been added to `changed.txt`
-                        pass
-                    else:
-                        # task has not been added to `changed.txt`, meaning it is a new assignment
-                        new_task = self.todoist.add_task(
-                            content,
-                            self.working_project.id,
-                            section_id=self.working_section.id,
-                            due_string=due_string,
-                            priority=priority,
-                            labels=[labels[course].name],
-                            desc=readme if len(assignment) == 6 else None
-                        )
-                        changed[name] = {'id': new_task.id, 'due': new_task.due.datetime, 'changed': False}
-                        self.notifier.show_toast(
-                            f'New assignment: {name}', 
-                            f'From {course}\nDue at {due_datetime.strftime("%Y-%m-%d %H:%M")}', 
-                            duration=10,
-                            icon_path="",
-                            threaded=True
-                        )
+                    if len(changed) > 0:
+                        for key, value in changed.items():
+                            if value['name'] == name and value['course'] == course:
+                                # task has been added to `changed.txt`
+                                if _debug:
+                                    print(f'{name} has been added to Todoist but not in the local current list, and ignored.')
+                                return
+                    # task has not been added to `changed.txt`, meaning it is a new assignment
+                    new_task = self.todoist.add_task(
+                        content,
+                        self.working_project.id,
+                        section_id=self.working_section.id,
+                        due_string=due_string,
+                        priority=priority,
+                        labels=[labels[course].name],
+                        desc=readme if len(assignment) == 6 else None
+                    )
+                    changed[new_task.id] = {'name': name, 'course': course, 'due': new_task.due.datetime, 'changed': False}
+                    self.notifier.show_toast(
+                        f'New assignment: {name}', 
+                        f'From {course}\nDue at {due_datetime.strftime("%Y-%m-%d %H:%M")}', 
+                        duration=10,
+                        icon_path="",
+                        threaded=True
+                    )
+                    if _debug:
+                        print(f'{name} is a new assignment.')
 
         with open(self.settings.changed_file_path, 'w') as f:
             if sys.stdout is not None and sys.stdout.isatty():
@@ -223,9 +242,10 @@ class TaskManager:
                 prog_bar = tqdm(changed.items(), desc='Saving assignments')
             else:
                 prog_bar = changed.items()
-            for name, info in prog_bar:
-                # if info["due"] is str type
+            for id, info in prog_bar:
+                # line format: `task_id || task_name || task_course || task_due || task_changed_flag\r\n`
                 if isinstance(info["due"], str):
-                    print(f'{info["id"]} || {name} || {info["due"]} || {info["changed"]}', file=f)
+                    # info["due"] is str type
+                    print(f'{id} || {info["name"]} || {info["course"]} || {info["due"]} || {info["changed"]}', file=f)
                 else:
-                    print(f'{info["id"]} || {name} || {info["due"].strftime("%Y-%m-%dT%H:%M:%S")} || {info["changed"]}', file=f)
+                    print(f'{id} || {info["name"]} || {info["course"]} || {info["due"].strftime("%Y-%m-%dT%H:%M:%S")} || {info["changed"]}', file=f)

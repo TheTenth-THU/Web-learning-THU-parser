@@ -52,11 +52,37 @@ class HTTPSHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=returned_path, **kwargs)
 
-def run_https_server(returned_port, cert_file, key_file):
+    def do_GET(self):
+        if self.path == "/favicon.ico":
+            try:
+                if hasattr(sys, '_MEIPASS'):
+                    # after packaging
+                    icon_path = os.path.join(sys._MEIPASS, "logo.ico")
+                else:
+                    # before packaging
+                    icon_path = os.path.abspath("res\\logo.ico")
+                with open(icon_path, 'rb') as f:
+                    icon = f.read()
+                self.send_response(200)
+                self.send_header("Content-type", "image/x-icon")
+                self.send_header("Content-Length", str(len(icon)))
+                self.end_headers()
+                self.wfile.write(icon)
+            except Exception as e:
+                self.send_error(404, f'File not found: {self.path}')
+        else:
+            return super().do_GET()
+
+server_holder = []
+
+def run_https_server(returned_port, cert_file, key_file) -> http.server.HTTPServer:
+    """ Run an HTTPS server to serve local files. """
     httpd = http.server.HTTPServer(('localhost', int(returned_port)), HTTPSHandler)
     httpd.socket = ssl.wrap_socket(httpd.socket, server_side=True, certfile=cert_file, keyfile=key_file)
     print(f"Serving HTTPS on https://localhost:{returned_port}")
+    server_holder.append(httpd)
     httpd.serve_forever()
+    return httpd
 
 
 ##################### Main #####################
@@ -77,7 +103,7 @@ without_console_path = os.path.join(base_dir, "without_console.exe")
 schtask_cmd = [
     "schtasks", "/Create",
     "/SC", "HOURLY",
-    "/MO", "3",
+    "/MO", "1",
     "/TN", task_name,
     "/TR", f'"{without_console_path}"',
     "/F"
@@ -164,6 +190,9 @@ time.sleep(1)
 input("Press Enter to exit...")
 
 # close the HTTPS server
+if len(server_holder):
+    for server in server_holder:
+        server.shutdown()
 thread.join()
 print("HTTPS server closed.")
 print("Exiting the program.")

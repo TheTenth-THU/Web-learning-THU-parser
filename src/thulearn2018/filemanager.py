@@ -42,10 +42,15 @@ class FileManager():
         new_password = getpass.getpass()
         if new_password:
             password = new_password
-        sf = open(self.settings.user_file_path, 'w')
-        print(username, file=sf)
-        print(password, file=sf)
-        sf.close()
+        # save info to the first 2 lines of user.txt, keep the rest
+        try:
+            with open(self.settings.user_file_path, 'r') as f:
+                lines = f.readlines()
+        except FileNotFoundError:
+            lines = []
+        lines = [username + '\n', password + '\n'] + lines[2:]
+        with open(self.settings.user_file_path, 'w') as f:
+            f.writelines(lines)
         return (username, password)
 
     def get_user(self, reset=True):
@@ -134,11 +139,11 @@ class FileManager():
         temp_size = 0
         original_stdout = sys.stdout
         sys.stdout = open(os.devnull, 'w') if quiet else original_stdout
-        print("  New " + file_name + " !")
+        print("  Fetch " + file_name + ".")
         if (not os.path.exists(save_path)):
-            print("  Create " + file_name)
+            print("    Create " + file_name + "!")
         else:
-            print("  Cover " + file_name)
+            print("    Cover " + file_name + "!")
             if os.path.exists(save_path+".tmp"):
                 os.remove(save_path+".tmp")
             os.rename(save_path, save_path+".tmp")
@@ -147,30 +152,39 @@ class FileManager():
                 for chunk in file_page.iter_content(chunk_size=1024 * 10):
                     if chunk:
                         temp_size += len(chunk)
+                        sys.stdout.write(f"    Downloading file chunks to {utils.size_format(temp_size)}...".ljust(55) + "\r")
+                        sys.stdout.flush()
                         local.write(chunk)
                         local.flush()
-                        if (total_size != 0):
-                            done = int(30 * temp_size / total_size)
-                            space = " "
-                            if (platform.system() == "Windows"):
-                                space = "  "
-                            sys.stdout.write("\r[%s%s] %d%% %s/%s    \t" %
-                                             ('█'*done, space*(30-done),
-                                              100*temp_size / total_size,
-                                              utils.size_format(temp_size),
-                                              utils.size_format(total_size)))
-                            sys.stdout.flush()
-                        else:
-                            sys.stdout.write("\r\t%s/UNKNOWN    \t" %
-                                             (utils.size_format(temp_size)))
-                            sys.stdout.flush()
-            sys.stdout.write("\n")
+                        # if (total_size != 0):
+                        #     done = int(30 * temp_size / total_size)
+                        #     space = " "
+                        #     if (platform.system() == "Windows"):
+                        #         space = "  "
+                        #     sys.stdout.write("\r[%s%s] %d%% %s/%s    \t" %
+                        #                      ('█'*done, space*(30-done),
+                        #                       100*temp_size / total_size,
+                        #                       utils.size_format(temp_size),
+                        #                       utils.size_format(total_size)))
+                        #     sys.stdout.flush()
+                        # else:
+                        #     sys.stdout.write("\r\t%s/UNKNOWN    \t" %
+                        #                      (utils.size_format(temp_size)))
+                        #     sys.stdout.flush()
+            # sys.stdout.write("\n")
         except KeyboardInterrupt:
-            print("\n  Interrupted")
+            print("    Interrupted.".ljust(55) + "\n")
+            if os.path.exists(save_path):
+                os.remove(save_path)
+            if os.path.exists(save_path+".tmp"):
+                os.rename(save_path+".tmp", save_path)
+        except Exception as e:
+            sys.stdout.write(f"    Failed to download file: {e}\n")
             if os.path.exists(save_path):
                 os.remove(save_path)
             if os.path.exists(save_path+".tmp"):
                 os.rename(save_path+".tmp", save_path)
         if os.path.exists(save_path+".tmp"):
             os.remove(save_path+".tmp")
+        sys.stdout.write("    Done.".ljust(55) + "\n")
         sys.stdout = original_stdout

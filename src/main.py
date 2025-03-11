@@ -23,6 +23,9 @@ def main(path=None):
     tmsettings = tmSettings(path)
 
     reset = (sys.stdin is not None) and (sys.stdin.isatty()) and (sys.stdout is not None) 
+    if reset:
+        print("Reset mode accessible. ")
+        reset = input("Use reset mode to input the path and port manually? ([Y]/n) ") in ['', 'Y', 'y']
 
     ln = Learn(lnsettings, reset=reset)
     tm = TaskManager(tmsettings, reset=reset)
@@ -56,14 +59,15 @@ def main(path=None):
     try:
         print(f"Get {len(lessons)} Lesson(s):")
         for lesson in lessons:
-            print(lesson)
+            print("\t".join(lesson))
         tm.init_courses(lessons)
         print("Courses initialized.")
         print("=================================================")
 
         print(f"Get {len(assignments)} Assignment(s):")
         for assignment in assignments:
-            print(assignment)
+            assign = assignment[:-1] + ["..."]
+            print("\t".join(assign))
         tm.update_assignments(assignments)
         print("Assignments updated.")
         print("=================================================")

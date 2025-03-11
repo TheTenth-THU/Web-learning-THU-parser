@@ -61,6 +61,7 @@ from urllib3.exceptions import InsecureRequestWarning
 from urllib3 import disable_warnings
 
 from . import filemanager, jsonhelper, soup, utils
+from .settings import Settings
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -84,7 +85,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 #         return super(SSLAdapter, self).proxy_manager_for(proxy, **kwargs)
 
 class Learn():
-    def __init__(self, settings, reset=False):
+    def __init__(self, settings: Settings, reset=False):
         """Initialize the `Learn` class.
         
         This method initializes the `Learn` class by setting up the session and headers for the `requests` library, and creating instances of the `FileManager`, `JsonHelper` and `Soup` classes.
@@ -97,7 +98,8 @@ class Learn():
         self.session.headers = self.settings.headers
 
         self.fm = filemanager.FileManager(self.settings)
-        if reset:
+        self.reset = reset
+        if self.reset:
             self.fm.set_user()
             self.fm.set_path()
         self.username, self.password = self.fm.get_user()
@@ -352,10 +354,17 @@ class Learn():
         if download_files:
             try:
                 with open(self.settings.user_file_path, "r") as f:
-                    port = f.readlines()[2].strip()
-                    self.settings.port = port
-            except Exception:
-                if sys.stdout is not None and sys.stdout.isatty():
+                    lines = f.readlines()
+                    port = lines[2].replace('\n', '').replace('\r', '')
+                if self.reset:
+                    print("The port in config file is:", port)
+                    port = input("Input the port (press Enter to skip): ")
+                # assert port as an integer
+                assert port.isdigit()
+                self.settings.port = port
+            except Exception as e:
+                if sys.stdout is not None and sys.stdout.isatty() and self.reset:
+                    print(f"Warning: Failed to get the port, due to {e}")
                     port = input("Please input the port of the server: ")
                     self.settings.port = port
                     if port != "":
@@ -368,6 +377,7 @@ class Learn():
             for hw in self.jh.loads(self._get(api))["object"]["aaData"]:
                 content = self._get(self.settings.homework_url(lesson_id, hw))
                 hw_title, hw_readme = self.soup.parse_homework(content, hw)
+                print(f"  Fetched homework: {hw_title}")
                 ddls.append([lesson_name, 
                              hw_title, 
                              hw["jzsjStr"], 
@@ -393,42 +403,50 @@ class Learn():
                                 not self.file_id_exist(annex_id)):
                             annex = self.session.get(download_url, stream=True)
                             fpath = os.path.join(hw_dir, annex_prefix+annex_name)
-                            self.fm.downloadto(fpath, annex, annex_name)
-                            self.save_file_id(annex_id, fpath)
-                            # file path relative to the `self.path` directory
-                            file_path = os.path.relpath(fpath, self.path)
-                            # process the path for the server to handle "\", " ", Chinese characters, etc.
-                            file_path = file_path.replace("\\", "/")
-                            file_path = quote(file_path, safe=":/")
-                            # add annexes to readme in `ddls` (ddls[-1][4])
-                            ddls[-1][4] += f"\n[Assignment annex](https://localhost:{port}/{file_path})"
+                            try:
+                                self.fm.downloadto(fpath, annex, annex_name)
+                                self.save_file_id(annex_id, fpath)
+                            except Exception as e:
+                                print(f"    Failed to download annex: {e}")
+                            try:
+                                # file path relative to the `self.path` directory
+                                file_path = os.path.relpath(fpath, self.path)
+                                # process the path for the server to handle "\", " ", Chinese characters, etc.
+                                file_path = file_path.replace("\\", "/")
+                                file_path = quote(file_path, safe=":/")
+                                # add annexes to readme in `ddls` (ddls[-1][4])
+                                ddls[-1][4] += f"\n[Assignment annex](https://localhost:{port}/{file_path})"
+                            except Exception as e:
+                                print(f"    Failed to add annex to README.md: {e}")
+                            print(f"    Downloaded annexes.")
                     ddls[-1][4] += " (￣ェ￣;)"
 
-                    img_names = []
-                    for i, img_url in enumerate(img_urls):
-                        img = self.session.get(img_url, stream=True)
-                        img_name = f'''{i+1}_{img.headers.get(
-                            'content-disposition').split(
-                            'filename=')[1].strip('"')}'''
-                        if img.content[:8] == b'\x89PNG\x0d\x0a\x1a\x0a':
-                            img_name = os.path.splitext(img_name)[0] + ".png"
-                        fpath = os.path.join(hw_dir, img_name)
-                        self.fm.downloadto(fpath, img, img_name, quiet=True)
-                        img_names.append(img_name)
+                    # img_names = []
+                    # for i, img_url in enumerate(img_urls):
+                    #     img = self.session.get(img_url, stream=True)
+                    #     img_name = f'''{i+1}_{img.headers.get(
+                    #         'content-disposition').split(
+                    #         'filename=')[1].strip('"')}'''
+                    #     if img.content[:8] == b'\x89PNG\x0d\x0a\x1a\x0a':
+                    #         img_name = os.path.splitext(img_name)[0] + ".png"
+                    #     fpath = os.path.join(hw_dir, img_name)
+                    #     self.fm.downloadto(fpath, img, img_name, quiet=True)
+                    #     img_names.append(img_name)
 
-                    # add images to README.md
-                    if img_names:
-                        readme_path = os.path.join(hw_dir, "README.md")
-                        with open(readme_path, "r") as f:
-                            content = f.readlines()
-                        for i, line in enumerate(content):
-                            if line.strip() in ["#### Description", "#### 作业说明"]:
-                                insert_index = i + 1
-                                break
-                        for img_name in reversed(img_names):
-                            content.insert(insert_index, f"![]({img_name})\n")
-                        with open(readme_path, "w") as file:
-                            file.writelines(content)
+                    # # add images to README.md
+                    # if img_names:
+                    #     readme_path = os.path.join(hw_dir, "README.md")
+                    #     with open(readme_path, "r") as f:
+                    #         content = f.readlines()
+                    #     for i, line in enumerate(content):
+                    #         if line.strip() in ["#### Description", "#### 作业说明"]:
+                    #             insert_index = i + 1
+                    #             break
+                    #     for img_name in reversed(img_names):
+                    #         content.insert(insert_index, f"![]({img_name})\n")
+                    #     with open(readme_path, "w") as file:
+                    #         file.writelines(content)
+                print(f"    Downloaded files for {hw_title}.")
         return ddls
 
     def upload(self, homework_id, file_path, message):
@@ -463,7 +481,8 @@ class Learn():
             ddls (list):    List of homework deadlines, each represented as a list of the form [_lesson_name_, _homework_title_, _deadline_, _time_left_, _size_].
         """
         ddls = []
-        for lesson in lessons:
+        for i, lesson in enumerate(lessons):
+            print(f"Fetching homework for {lesson[1]} ({i+1}/{len(lessons)})...")
             ddls += self.download_homework(
                 lesson[0], lesson[4], download_submission, download_files)
         # delete expired homework by comparing ddl[2] with current time
